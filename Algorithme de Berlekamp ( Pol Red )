@@ -1,0 +1,51 @@
+#Question 1 : Pour un Polynome Reductible sur F_2
+# Initialisation
+p = 2
+F = GF(p)
+R.<x> = PolynomialRing(F)
+f = x^4 + x^2 + x + 1  # Polynôme à factoriser
+
+# Vérification que f est sans facteur carré
+assert gcd(f, f.derivative()) == 1, "Le polynôme a des racines multiples."
+print("PGCD(f,f')=",gcd(f, f.derivative()))
+
+# Construction de la matrice de Berlekamp Q
+n = f.degree()
+Q = matrix(F, n, n)
+
+for i in range(n):
+    # Calcul de x^(2^i) mod f pour 0=<i<4 car deg(f) = 4
+    x_power = pow(x, p^i, f)
+    # Conversion en vecteur de coefficients (remplissage avec des 0 si nécessaire)
+    coeffs = x_power.coefficients(sparse=False)
+    if len(coeffs) < n:
+        coeffs += [0] * (n - len(coeffs))
+    Q.set_column(i, coeffs) 
+    print(" x^p^",i,"est:",x_power)
+print("La matrice Q est:\n", Q)
+    
+# Matrice de Berlekamp B = Q - I
+B = Q - identity_matrix(F, n)
+print("\n Matrice B :\n", B)
+
+# Calcul du noyau
+ker = B.right_kernel()
+print("\nDimension du noyau :", ker.dimension())
+
+# Factorisation
+if ker.dimension() == 1:
+    print(f"Le polynôme {f} est irréductible.")
+else:
+    print("Facteurs trouvés :")
+    for v in ker.basis():
+        a = sum(v[i] * x^i for i in range(n))
+        if a != 0 and a != 1:  # Évite les polynômes triviaux
+            for s in F:
+                g = gcd(f, a - s)
+                if g != 1 and g != f:
+                    print(g)
+
+# Validation avec SageMath
+print("\nValidation SageMath :", f.factor())
+
+# la on est sensés trouver deux facteurs : (x + 1) * (x^3 + x^2 + 1)
