@@ -28,7 +28,7 @@ def berlekamp_algorithm(f, p):
         for a in F:
             g = gcd(f, V - a)
             if g != 1 and g != f:
-                return berlekamp_improved(g, p) + berlekamp_improved(f // g, p)
+                return berlekamp_algorithm(g, p) + berlekamp_algorithm(f // g, p)
 
     return [f]  # Cas où f est irréductible (non géré par Berlekamp)
 
