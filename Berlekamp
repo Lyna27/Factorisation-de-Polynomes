@@ -1,0 +1,41 @@
+def berlekamp_algorithm(f, p):
+    F = GF(p)
+    R.<x> = PolynomialRing(F)
+    f = R(f)
+    n = f.degree()
+
+    if n <= 1:
+        return [f]
+
+    # Construction de la matrice de Berlekamp
+    rows = []
+    for i in range(n):
+        Ri = (x^(i*p) - x^i) % f
+        coeffs = Ri.coefficients(sparse=False)
+        coeffs += [0] * (n - len(coeffs))
+        rows.append(coeffs)
+
+    A = Matrix(F, list(map(list, zip(*rows))))  # Transposée pour avoir les bonnes colonnes
+    ker = A.right_kernel()
+    ker_basis = ker.basis()
+
+    if len(ker_basis) == 1:
+        return [f]
+
+    # On essaie tous les vecteurs non constants
+    for v in ker_basis[1:]:
+        V = sum(c * x^i for i, c in enumerate(v))
+        for a in F:
+            g = gcd(f, V - a)
+            if g != 1 and g != f:
+                return berlekamp_improved(g, p) + berlekamp_improved(f // g, p)
+
+    return [f]  # Cas où f est irréductible (non géré par Berlekamp)
+
+#Polynome réductible sur F_2
+f = x^6 + x^5 + x^4 + x^2 + x + 1
+print(berlekamp_algorithm(f, 2))
+
+#Polynome irréductible sur F_2
+f = x^2 + x + 1
+print(berlekamp_algorithm(f, 2))
