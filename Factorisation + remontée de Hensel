@@ -1,0 +1,71 @@
+def factorize_in_Z(P):
+    P = P.primitive_part()  # Rendre P primitif
+    if P.is_squarefree() is False:
+        print("Attention : P a des facteurs multiples !")
+        return None
+    
+    # Choix de p (premier ne divisant pas Res(P, P'))
+    p = 2
+    while P.discriminant() % p == 0:
+        p = next_prime(p)
+    
+    # Factorisation mod p avec Berlekamp
+    Fp = GF(p)
+    Rp.<x> = PolynomialRing(Fp)
+    Pf = Rp(P)
+    factors_mod_p = [f[0] for f in Pf.factor()]
+    
+    if len(factors_mod_p) == 1:
+        return [P]  # Irréductible
+    
+    # Essayer toutes les combinaisons de facteurs
+    for I in subsets(range(len(factors_mod_p))):
+        if not I: continue
+        G1 = prod(factors_mod_p[i] for i in I)
+        H1 = prod(factors_mod_p[i] for i in range(len(factors_mod_p)) if i not in I)
+        
+        # Remontée de Hensel
+        k = 1
+        Gk = G1.change_ring(ZZ)
+        Hk = H1.change_ring(ZZ)
+        while p^k <= 2 * height_bound(P):
+            Gk, Hk = hensel_lift(P, Gk, Hk, p, k)
+            k += 1
+        
+        # Vérifier si Gk divise P dans ℤ[X]
+        Gk = Gk.change_ring(ZZ)
+        if P % Gk == 0:
+            return [Gk, P // Gk]
+    
+    return [P]  # Irréductible
+
+
+def hensel_lift(f, Gk, Hk, p, k):
+    Zpk.<x> = PolynomialRing(Zmod(p^(k+1)))
+    f_lift = Zpk(f)
+    Gk_lift = Zpk(Gk)
+    Hk_lift = Zpk(Hk)
+    
+    # Bézout mod p (calculé dans F_p[X])
+    Fp = GF(p)
+    Rp.<x> = PolynomialRing(Fp)
+    G0 = Rp(Gk)
+    H0 = Rp(Hk)
+    U, V, _ = xgcd(G0, H0)  # U*G0 + V*H0 = 1 mod p
+    
+    # Correction
+    E = (f_lift - Gk_lift * Hk_lift) // p^k
+    Gk1 = Gk_lift + p^k * Zpk(U) * Zpk(E)
+    Hk1 = Hk_lift + p^k * Zpk(V) * Zpk(E)
+    
+    return Gk1, Hk1
+
+# Application à f = x^6 + x^5 + x^4 + x^2 + x + 1
+p = 2
+k = 1
+G1 = x^3 + x + 1
+H1 = x^3 + x^2 + 1
+
+G2, H2 = hensel_lift(f, G1, H1, p, k)
+print("G2 =", G2)
+print("H2 =", H2)
